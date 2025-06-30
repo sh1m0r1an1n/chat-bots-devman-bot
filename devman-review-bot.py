@@ -63,7 +63,7 @@ def check_dvmn_reviews() -> None:
             continue
         except requests.exceptions.ConnectionError:
             continue
-        except (requests.exceptions.RequestException, TelegramError) as e:
+        except (requests.exceptions.RequestException, TelegramError):
             continue
 
 

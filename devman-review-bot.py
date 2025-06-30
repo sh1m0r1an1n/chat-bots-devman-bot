@@ -80,11 +80,7 @@ def main() -> None:
     except KeyError as e:
         raise ValueError(f"Отсутствует обязательная переменная окружения: {e}")
 
-    check_dvmn_reviews(
-        dvmn_api_token=dvmn_api_token,
-        bot_token=bot_token,
-        chat_id=chat_id
-    )
+    check_dvmn_reviews(dvmn_api_token, bot_token, chat_id)
 
 if __name__ == "__main__":
     main()

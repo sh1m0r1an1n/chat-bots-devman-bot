@@ -18,7 +18,7 @@
 
 1. Клонируйте репозиторий:
 ```bash
-git clone https://github.com/yourusername/devman-review-bot.git
+git clone https://github.com/sh1m0r1an1n/chat-bots-devman-bot
 cd devman-review-bot
 ```
 

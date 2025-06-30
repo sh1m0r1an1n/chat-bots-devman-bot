@@ -7,7 +7,7 @@ from telegram import Bot, TelegramError
 
 load_dotenv()
 
-API_TOKEN = os.getenv("DVMN_API_TOKEN")
+DVMN_API_TOKEN = os.getenv("DVMN_API_TOKEN")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 LONG_POLLING_URL = "https://dvmn.org/api/long_polling/"
@@ -33,10 +33,10 @@ def send_telegram_notification(attempt: dict) -> None:
 
 def check_dvmn_reviews() -> None:
     """Опрашивает API Devman на наличие новых проверок."""
-    if not all([API_TOKEN, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID]):
+    if not all([DVMN_API_TOKEN, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID]):
         raise ValueError("Не найдены необходимые переменные окружения")
 
-    headers = {"Authorization": f"Token {API_TOKEN}"}
+    headers = {"Authorization": f"Token {DVMN_API_TOKEN}"}
     timestamp = None
 
     while True:

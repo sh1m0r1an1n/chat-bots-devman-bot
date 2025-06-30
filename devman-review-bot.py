@@ -1,17 +1,12 @@
 import os
 import time
-from typing import Optional
 
 from dotenv import load_dotenv
 import requests
 from telegram import Bot, TelegramError
 
 
-def send_telegram_notification(
-    bot_token: str,
-    chat_id: str,
-    attempt: dict
-) -> None:
+def send_telegram_notification(bot_token, chat_id, attempt):
     """Отправляет уведомление в Telegram о новой проверке."""
     lesson_title = attempt["lesson_title"]
     status = "❌ Есть замечания" if attempt["is_negative"] else "✅ Принято"
@@ -28,17 +23,11 @@ def send_telegram_notification(
     bot.send_message(chat_id=chat_id, text=message)
 
 
-def check_dvmn_reviews(
-    dvmn_api_token: str,
-    bot_token: str,
-    chat_id: str,
-    timeout: int = 90,
-    retry_delay: int = 5
-) -> None:
+def check_dvmn_reviews(api_token, bot_token, chat_id, timeout = 90, retry_delay = 5):
     """Опрашивает API Devman на наличие новых проверок."""
-    headers = {"Authorization": f"Token {dvmn_api_token}"}
+    headers = {"Authorization": f"Token {api_token}"}
     long_polling_url = "https://dvmn.org/api/long_polling/"
-    timestamp: Optional[float] = None
+    timestamp = None
 
     while True:
         try:
@@ -69,18 +58,18 @@ def check_dvmn_reviews(
             continue
 
 
-def main() -> None:
+def main():
     """Основная функция запуска бота."""
     load_dotenv()
 
     try:
-        dvmn_api_token = os.environ["DVMN_API_TOKEN"]
+        api_token = os.environ["DVMN_API_TOKEN"]
         bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
         chat_id = os.environ["TELEGRAM_CHAT_ID"]
     except KeyError as e:
         raise ValueError(f"Отсутствует обязательная переменная окружения: {e}")
 
-    check_dvmn_reviews(dvmn_api_token, bot_token, chat_id)
+    check_dvmn_reviews(api_token, bot_token, chat_id)
 
 if __name__ == "__main__":
     main()

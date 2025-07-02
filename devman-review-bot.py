@@ -1,9 +1,39 @@
+import logging
 import os
 import time
+import traceback
 
 from dotenv import load_dotenv
 import requests
 from telegram import Bot, TelegramError
+
+
+class TelegramLogHandler(logging.Handler):
+    """Отправляет логи в Telegram"""
+
+    def __init__(self, bot_token, chat_id, level=logging.INFO):
+        super().__init__(level=level)
+        self.bot = Bot(token=bot_token)
+        self.chat_id = chat_id
+
+    def emit(self, record):
+        """Отправка сообщения с логом"""
+        log_entry = self.format(record)
+        self.bot.send_message(chat_id=self.chat_id, text=log_entry)
+
+
+def setup_logging(bot_token, chat_id):
+    """Настройка логирования для Telegram"""
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    logger.handlers.clear()
+
+    telegram_handler = TelegramLogHandler(bot_token, chat_id)
+    telegram_handler.setFormatter(
+        logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    )
+    logger.addHandler(telegram_handler)
 
 
 def send_telegram_notification(bot_token, chat_id, attempt):
@@ -19,8 +49,11 @@ def send_telegram_notification(bot_token, chat_id, attempt):
         f"Ссылка: {lesson_url}"
     )
 
-    bot = Bot(token=bot_token)
-    bot.send_message(chat_id=chat_id, text=message)
+    try:
+        bot = Bot(token=bot_token)
+        bot.send_message(chat_id=chat_id, text=message)
+    except TelegramError as e:
+        logging.error(f"Failed to send Telegram notification: {e}")
 
 
 def check_dvmn_reviews(api_token, bot_token, chat_id, timeout = 90, retry_delay = 5):
@@ -28,6 +61,8 @@ def check_dvmn_reviews(api_token, bot_token, chat_id, timeout = 90, retry_delay 
     headers = {"Authorization": f"Token {api_token}"}
     long_polling_url = "https://dvmn.org/api/long_polling/"
     timestamp = None
+
+    logging.info("Бот запущен и начал проверку работ")
 
     while True:
         try:
@@ -43,6 +78,7 @@ def check_dvmn_reviews(api_token, bot_token, chat_id, timeout = 90, retry_delay 
             review_data = response.json()
 
             if review_data["status"] == "found":
+                logging.info(f"Найдены новые проверки: {len(review_data['new_attempts'])}")
                 for attempt in review_data["new_attempts"]:
                     send_telegram_notification(bot_token, chat_id, attempt)
                 timestamp = review_data["last_attempt_timestamp"]
@@ -52,9 +88,12 @@ def check_dvmn_reviews(api_token, bot_token, chat_id, timeout = 90, retry_delay 
         except requests.exceptions.ReadTimeout:
             continue
         except requests.exceptions.ConnectionError:
+            logging.warning("Ошибка соединения, повторная попытка...")
             time.sleep(retry_delay)
             continue
-        except (requests.exceptions.RequestException, TelegramError):
+        except (requests.exceptions.RequestException, TelegramError) as e:
+            logging.exception(f"Ошибка запроса: {e}")
+            time.sleep(retry_delay)
             continue
 
 
@@ -67,9 +106,16 @@ def main():
         bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
         chat_id = os.environ["TELEGRAM_CHAT_ID"]
     except KeyError as e:
-        raise ValueError(f"Отсутствует обязательная переменная окружения: {e}")
+        logging.exception(f"Отсутствует переменная окружения: {e}")
+        raise
 
+    setup_logging(bot_token, chat_id)
     check_dvmn_reviews(api_token, bot_token, chat_id)
 
 if __name__ == "__main__":
-    main()
+    while True:
+        try:
+            main()
+        except Exception as e:
+            logging.critical(f"Критическая ошибка: {e}\n{traceback.format_exc()}")
+            time.sleep(5)
